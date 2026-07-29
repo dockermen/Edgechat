@@ -35,8 +35,9 @@ import {
 const app = new Hono();
 
 app.use('/api/*', async (c, next) => {
-  if (requestBodyTooLarge(c.req.raw)) {
-    // 提前拒绝超大请求体，避免 Worker 在 JSON 解析前消耗过多内存。
+  const contentType = c.req.header('content-type') || '';
+  if (contentType.includes('application/json') && requestBodyTooLarge(c.req.raw)) {
+    // 仅对 JSON 接口提前拒绝超大请求体；文件上传由 upload 路由按 MAX_UPLOAD_FILE_SIZE 单独校验。
     return errorResponse('请求体过大', 413);
   }
 
