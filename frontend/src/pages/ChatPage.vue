@@ -53,7 +53,7 @@ function handleRoomAccessRevoked(room) {
 }
 
 const {
-  messages, loading, wsStatus, composerText, pendingAttachment, replyToMessage, sending,
+  messages, loading, wsStatus, composerText, pendingAttachment, uploadProgress, uploadingAttachment, replyToMessage, sending,
   messagesEl, fileInputEl, isOwnMessage,
   loadMessages, connectSocket, disconnectSocket, sendMessage, handleComposerKeydown,
   openFilePicker, uploadAttachment, clearAttachment, setReplyTo, clearReplyTo, loadOlder
@@ -352,6 +352,15 @@ onBeforeUnmount(() => {
               <span>{{ replyPreviewText(replyToMessage) }}</span>
             </div>
             <button type="button" class="composer-reply__close" aria-label="取消引用" @click="clearReplyTo">×</button>
+          </div>
+          <div v-if="uploadingAttachment || uploadProgress > 0" class="composer-upload-progress">
+            <div class="composer-upload-progress__head">
+              <span>{{ uploadingAttachment ? '附件上传中' : '附件已上传' }}</span>
+              <strong>{{ uploadProgress }}%</strong>
+            </div>
+            <div class="composer-upload-progress__track">
+              <i :style="{ width: `${uploadProgress}%` }"></i>
+            </div>
           </div>
           <div v-if="pendingAttachment" class="composer-attachment">
             <PendingAttachmentPreview :attachment="pendingAttachment" @clear="clearAttachment" />
@@ -1032,6 +1041,44 @@ onBeforeUnmount(() => {
 
 .composer-attachment {
   margin-bottom: 10px;
+}
+
+.composer-upload-progress {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid #e9edef;
+}
+
+.composer-upload-progress__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  color: #54656f;
+  font-size: 12px;
+}
+
+.composer-upload-progress__head strong {
+  color: #008069;
+}
+
+.composer-upload-progress__track {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e9edef;
+}
+
+.composer-upload-progress__track i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #06cf9c, #25d366);
+  transition: width 180ms ease;
 }
 
 .composer-reply {

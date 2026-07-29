@@ -153,12 +153,60 @@ export default {
   listDms() {
     return request('/dm');
   },
-  uploadFile(file) {
+  uploadFile(file, { onProgress } = {}) {
     const form = new FormData();
     form.append('file', file);
-    return request('/upload', {
-      method: 'POST',
-      body: form
+
+    if (typeof onProgress !== 'function' || typeof XMLHttpRequest === 'undefined') {
+      return request('/upload', {
+        method: 'POST',
+        body: form
+      });
+    }
+
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `${API_PREFIX}/upload`);
+      const headers = buildHeaders();
+      Object.entries(headers).forEach(([key, value]) => xhr.setRequestHeader(key, value));
+
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable && event.total > 0) {
+          const percent = Math.max(1, Math.min(99, Math.round((event.loaded / event.total) * 100)));
+          onProgress(percent);
+        }
+      };
+
+      xhr.onload = () => {
+        const contentType = xhr.getResponseHeader('content-type') || '';
+        let payload = xhr.responseText;
+        if (contentType.includes('application/json')) {
+          try {
+            payload = JSON.parse(xhr.responseText || '{}');
+          } catch {
+            payload = {};
+          }
+        }
+
+        if (xhr.status < 200 || xhr.status >= 300) {
+          const message = payload?.error || payload || 'Request failed';
+          const error = new Error(message);
+          error.status = xhr.status;
+          error.payload = payload;
+          if (xhr.status === 401 && typeof window !== 'undefined') {
+            dispatchAuthInvalid(message);
+          }
+          reject(error);
+          return;
+        }
+
+        onProgress(100);
+        resolve(payload);
+      };
+
+      xhr.onerror = () => reject(new Error('上传失败，请检查网络'));
+      xhr.onabort = () => reject(new Error('上传已取消'));
+      xhr.send(form);
     });
   },
   getRoomWebSocketUrl(kind, roomId) {

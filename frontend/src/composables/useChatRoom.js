@@ -21,6 +21,8 @@ export function useChatRoom({
 	const wsStatus = ref("closed");
 	const composerText = ref("");
 	const pendingAttachment = ref(null);
+	const uploadProgress = ref(0);
+	const uploadingAttachment = ref(false);
 	const replyToMessage = ref(null);
 	const sending = ref(false);
 	const messagesEl = ref(null);
@@ -171,6 +173,7 @@ export function useChatRoom({
 			);
 			composerText.value = "";
 			pendingAttachment.value = null;
+			uploadProgress.value = 0;
 			replyToMessage.value = null;
 		} catch (currentError) {
 			error.value = currentError.message;
@@ -196,18 +199,30 @@ export function useChatRoom({
 			return;
 		}
 
+		uploadingAttachment.value = true;
+		uploadProgress.value = 1;
 		try {
-			const payload = await api.uploadFile(file);
+			const payload = await api.uploadFile(file, {
+				onProgress(percent) {
+					uploadProgress.value = percent;
+				},
+			});
 			pendingAttachment.value = payload.file;
+			uploadProgress.value = 100;
 		} catch (currentError) {
 			error.value = currentError.message;
 		} finally {
+			uploadingAttachment.value = false;
+			if (!pendingAttachment.value) {
+				uploadProgress.value = 0;
+			}
 			event.target.value = "";
 		}
 	}
 
 	function clearAttachment() {
 		pendingAttachment.value = null;
+		uploadProgress.value = 0;
 	}
 
 	function setReplyTo(message) {
@@ -242,6 +257,8 @@ export function useChatRoom({
 		wsStatus,
 		composerText,
 		pendingAttachment,
+		uploadProgress,
+		uploadingAttachment,
 		replyToMessage,
 		sending,
 		messagesEl,

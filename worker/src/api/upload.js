@@ -77,6 +77,13 @@ function resolveCfbedUrl(baseUrl, value) {
 function extractCfbedUrl(payload, baseUrl) {
   if (!payload) return '';
   if (typeof payload === 'string') return resolveCfbedUrl(baseUrl, payload);
+  if (Array.isArray(payload)) {
+    for (const item of payload) {
+      const found = extractCfbedUrl(item, baseUrl);
+      if (found) return found;
+    }
+    return '';
+  }
   const candidates = [
     payload.publicUrl, payload.fullUrl, payload.url, payload.src, payload.href, payload.link,
     payload.data?.publicUrl, payload.data?.fullUrl, payload.data?.url, payload.data?.src,
