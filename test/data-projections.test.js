@@ -233,6 +233,7 @@ test("消息 projection 保持附件和发送者字段", () => {
 			attachment_name: "a b.txt",
 			attachment_type: "text/plain",
 			attachment_size: "10",
+			reply_to_message_id: null,
 		}),
 		{
 			id: 5,
@@ -251,6 +252,7 @@ test("消息 projection 保持附件和发送者字段", () => {
 				size: 10,
 				url: "/files/files%2Fa%20b.txt",
 			},
+			replyTo: null,
 		},
 	);
 });

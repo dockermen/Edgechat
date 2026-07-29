@@ -20,12 +20,18 @@ test("消息提交 module 统一持久化参数与广播 packet", async () => {
 	const result = await submit(
 		db,
 		{ room: { id: 3 }, principal: { userId: 7 } },
-		{ content: "hello", attachment: { key: "a" } },
+		{ content: "hello", attachment: { key: "a" }, replyToMessageId: 6 },
 	);
 
 	assert.deepEqual(calls, [{
 		db,
-		args: { channelId: 3, senderId: 7, content: "hello", attachment: { key: "a" } },
+		args: {
+			channelId: 3,
+			senderId: 7,
+			content: "hello",
+			attachment: { key: "a" },
+			replyToMessageId: 6,
+		},
 	}]);
 	assert.equal(result.message, message);
 	assert.deepEqual(JSON.parse(result.packet), { type: "message", message });

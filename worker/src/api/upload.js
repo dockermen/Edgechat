@@ -1,6 +1,7 @@
 import { errorResponse } from '../utils.js';
 
 const FILE_BROWSER_CACHE_CONTROL = 'public, max-age=31536000, immutable';
+const DEFAULT_MAX_FILE_SIZE = 200 * 1024 * 1024;
 const BLOCKED_MIME_TYPES = new Set([
   'text/html',
   'application/xhtml+xml',
@@ -53,7 +54,7 @@ function contentDispositionValue(kind, filename) {
 }
 
 function validateUpload(env, file) {
-  const maxFileSize = Number(env.MAX_FILE_SIZE || 20971520);
+  const maxFileSize = Number(env.MAX_UPLOAD_FILE_SIZE || env.MAX_FILE_SIZE || DEFAULT_MAX_FILE_SIZE);
   if (file.size > maxFileSize) {
     throw new Error(`文件大小不能超过 ${Math.round(maxFileSize / 1024 / 1024)}MB`);
   }
@@ -90,7 +91,7 @@ export function registerUploadRoutes(app) {
 
     const extension = file.name.includes('.') ? file.name.slice(file.name.lastIndexOf('.')) : '';
     const key = `${session.userId}/${Date.now()}-${crypto.randomUUID()}${extension}`;
-    await c.env.FILES.put(key, await file.arrayBuffer(), {
+    await c.env.FILES.put(key, file.stream(), {
       httpMetadata: {
         contentType: normalizeContentType(file.type) || 'application/octet-stream',
         cacheControl: FILE_BROWSER_CACHE_CONTROL
