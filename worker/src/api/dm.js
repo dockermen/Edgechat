@@ -1,0 +1,58 @@
+import { ensureDmChannel } from '../data/dm-provisioning.js';
+import { listAdminDms, listUserDms } from '../data/dm-queries.js';
+import { errorResponse, parseJsonRequest } from '../utils.js';
+
+export function registerDmRoutes(app) {
+  app.get('/api/dm', async (c) => {
+    const session = c.get('session');
+    const dms = await listUserDms(c.env.DB, session.userId);
+    return c.json({ dms });
+  });
+
+  app.post('/api/dm/open', async (c) => {
+    const session = c.get('session');
+    const payload = await parseJsonRequest(c.req.raw);
+    const targetUserId = Number(payload.userId);
+
+    if (!Number.isFinite(targetUserId) || targetUserId === session.userId) {
+      return errorResponse('请选择有效用户');
+    }
+
+    const targetUser = await c.env.DB.prepare(
+      `SELECT id, username, display_name, avatar_key
+       FROM users
+       WHERE id = ?
+         AND is_disabled = 0
+         AND deleted_at IS NULL
+       LIMIT 1`
+    )
+      .bind(targetUserId)
+      .all();
+
+    if (!targetUser.results[0]) {
+      return errorResponse('目标用户不存在', 404);
+    }
+
+    const channel = await ensureDmChannel(c.env.DB, session.userId, targetUserId);
+    return c.json({
+      dm: {
+        id: Number(channel.id),
+        kind: 'dm',
+        name: channel.dm_key,
+        otherUser: {
+          id: Number(targetUser.results[0].id),
+          username: targetUser.results[0].username,
+          displayName: targetUser.results[0].display_name,
+          avatarUrl: targetUser.results[0].avatar_key
+            ? `/files/${encodeURIComponent(targetUser.results[0].avatar_key)}`
+            : ''
+        }
+      }
+    });
+  });
+
+  app.get('/api/admin/dms', async (c) => {
+    const dms = await listAdminDms(c.env.DB);
+    return c.json({ dms });
+  });
+}
