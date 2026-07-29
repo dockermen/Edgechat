@@ -8,6 +8,15 @@ const PREVIEWABLE_IMAGE_EXTENSIONS = new Set([
   'avif'
 ]);
 
+const PREVIEWABLE_VIDEO_EXTENSIONS = new Set([
+  'mp4',
+  'webm',
+  'ogg',
+  'ogv',
+  'mov',
+  'm4v'
+]);
+
 function cleanMimeType(value) {
   return String(value || '')
     .split(';')[0]
@@ -40,4 +49,19 @@ export function isPreviewableImageAttachment(attachment) {
   // 旧消息或异常浏览器可能缺少 MIME，保留扩展名兜底以免历史图片只能显示成下载链接。
   const extension = extensionFrom(attachment.name) || extensionFrom(attachment.url);
   return PREVIEWABLE_IMAGE_EXTENSIONS.has(extension);
+}
+
+
+export function isPreviewableVideoAttachment(attachment) {
+  if (!attachment) {
+    return false;
+  }
+
+  const mimeType = cleanMimeType(attachment.type);
+  if (mimeType.startsWith('video/')) {
+    return true;
+  }
+
+  const extension = extensionFrom(attachment.name) || extensionFrom(attachment.url);
+  return PREVIEWABLE_VIDEO_EXTENSIONS.has(extension);
 }

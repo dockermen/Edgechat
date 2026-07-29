@@ -2,9 +2,10 @@
   margin-top: 10px;
 }
 
-.message-attachment--image {
+.message-attachment--image,
+.message-attachment--video {
   display: block;
-  max-width: min(360px, 68vw);
+  max-width: min(420px, 72vw);
 }
 
 .message-attachment__image-button {
@@ -18,13 +19,23 @@
   cursor: zoom-in;
 }
 
-.message-attachment__image {
+.message-attachment__image,
+.message-attachment__video {
   display: block;
   width: 100%;
   max-height: 320px;
   object-fit: contain;
   border-radius: 16px;
   background: rgba(31, 37, 33, 0.08);
+}
+
+.message-attachment__video {
+  min-height: 180px;
+  outline: none;
+}
+
+.message-attachment__video-link {
+  margin-top: 8px;
 }
 
 .message-attachment__file {
@@ -111,12 +122,18 @@
 }
 
 @media (max-width: 720px) {
-  .message-attachment--image {
-    max-width: min(280px, 74vw);
+  .message-attachment--image,
+  .message-attachment--video {
+    max-width: min(300px, 78vw);
   }
 
-  .message-attachment__image {
+  .message-attachment__image,
+  .message-attachment__video {
     max-height: 260px;
+  }
+
+  .message-attachment__video {
+    min-height: 160px;
   }
 
   .image-preview-overlay {

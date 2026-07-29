@@ -1,6 +1,6 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
-import { isPreviewableImageAttachment } from './attachment-utils.js';
+import { isPreviewableImageAttachment, isPreviewableVideoAttachment } from './attachment-utils.js';
 
 const props = defineProps({
   attachment: {
@@ -13,6 +13,7 @@ const previewOpen = ref(false);
 const previewEl = ref(null);
 const imageFailed = ref(false);
 const isImage = computed(() => isPreviewableImageAttachment(props.attachment));
+const isVideo = computed(() => isPreviewableVideoAttachment(props.attachment));
 const displayName = computed(() => props.attachment?.name || '附件');
 const openOriginalLabel = computed(() => `打开原图：${displayName.value}`);
 
@@ -53,7 +54,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="message-attachment" :class="{ 'message-attachment--image': isImage }">
+  <div class="message-attachment" :class="{ 'message-attachment--image': isImage, 'message-attachment--video': isVideo }">
     <template v-if="isImage">
       <button
         v-if="!imageFailed"
@@ -109,6 +110,27 @@ onBeforeUnmount(() => {
           <img class="image-preview-overlay__image" :src="attachment.url" :alt="displayName" />
         </div>
       </Teleport>
+    </template>
+
+    <template v-else-if="isVideo">
+      <video
+        class="message-attachment__video"
+        :src="attachment.url"
+        :title="displayName"
+        controls
+        preload="metadata"
+        playsinline
+      >
+        当前浏览器不支持视频预览。
+      </video>
+      <a
+        :href="attachment.url"
+        target="_blank"
+        rel="noreferrer"
+        class="chat-bubble__attachment message-attachment__file message-attachment__video-link"
+      >
+        打开视频：{{ displayName }}
+      </a>
     </template>
 
     <a
