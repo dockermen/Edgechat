@@ -69,6 +69,23 @@ npm run dev:frontend
 npm run build
 ```
 
+
+### 本地运行记录
+
+本地已使用 `wrangler.example.toml` 生成忽略提交的 `wrangler.toml`，并在 `http://127.0.0.1:8788` 启动完整 Worker 本地服务。
+
+本地初始化命令：
+
+```bash
+npm run build
+npx wrangler d1 execute cfchat-db --local --file=./worker/schema.sql
+EDGECHAT_ADMIN_USERNAME=admin EDGECHAT_ADMIN_PASSWORD=admin EDGECHAT_ADMIN_DISPLAY_NAME=Administrator node .github/scripts/generate-admin-bootstrap-sql.mjs
+npx wrangler d1 execute cfchat-db --local --file=.tmp/edgechat-admin-upsert.sql
+npx wrangler dev --local --ip 127.0.0.1 --port 8788
+```
+
+本地默认管理员：`admin / admin`。本地 D1、KV、R2 数据位于 `.wrangler/state/`，该目录不会提交到 Git。
+
 ### 上传大小配置
 
 默认单文件上传上限为 `200MB`。如需按部署环境调整，可在 Cloudflare Worker 环境变量中设置：
