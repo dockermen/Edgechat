@@ -53,6 +53,12 @@ export function registerMessageRoutes(app) {
       return errorResponse('无权访问该会话', 403);
     }
 
+    await markRoomRead(c.env.DB, {
+      channelId: roomId,
+      userId: session.userId,
+      messageId
+    });
+
     const members = await listMessageReadStatus(c.env.DB, { channelId: roomId, messageId });
     return c.json({
       messageId,

@@ -121,6 +121,12 @@ export function useChatRoom({
 			messages.value = append
 				? [...payload.messages, ...messages.value]
 				: payload.messages;
+			if (!append && messages.value.length) {
+				const lastMessage = messages.value[messages.value.length - 1];
+				void api
+					.markRoomRead(activeRoom.value.kind, activeRoom.value.id, lastMessage.id)
+					.catch(() => {});
+			}
 			await nextTick();
 			if (!append) {
 				scrollToBottom();
