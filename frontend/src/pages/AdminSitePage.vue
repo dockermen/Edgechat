@@ -27,6 +27,7 @@ const siteForm = reactive({
   cfbedBaseUrl: '',
   cfbedAuthCode: '',
   cfbedApiToken: '',
+  cfbedUploadPath: '/upload',
   cfbedUploadChannel: '',
   cfbedChannelName: '',
   cfbedUploadFolder: '',
@@ -59,6 +60,7 @@ async function loadOverview() {
     siteForm.cfbedBaseUrl = payload.site?.cfbedBaseUrl || '';
     siteForm.cfbedAuthCode = payload.site?.cfbedAuthCode || '';
     siteForm.cfbedApiToken = payload.site?.cfbedApiToken || '';
+    siteForm.cfbedUploadPath = payload.site?.cfbedUploadPath || '/upload';
     siteForm.cfbedUploadChannel = payload.site?.cfbedUploadChannel || '';
     siteForm.cfbedChannelName = payload.site?.cfbedChannelName || '';
     siteForm.cfbedUploadFolder = payload.site?.cfbedUploadFolder || '';
@@ -108,6 +110,7 @@ async function saveSiteSettings() {
     siteForm.cfbedBaseUrl = payload.site.cfbedBaseUrl || '';
     siteForm.cfbedAuthCode = payload.site.cfbedAuthCode || '';
     siteForm.cfbedApiToken = payload.site.cfbedApiToken || '';
+    siteForm.cfbedUploadPath = payload.site.cfbedUploadPath || '/upload';
     siteForm.cfbedUploadChannel = payload.site.cfbedUploadChannel || '';
     siteForm.cfbedChannelName = payload.site.cfbedChannelName || '';
     siteForm.cfbedUploadFolder = payload.site.cfbedUploadFolder || '';
@@ -239,6 +242,10 @@ onMounted(loadOverview);
               <label class="field">
                 <span>API Token</span>
                 <input v-model.trim="siteForm.cfbedApiToken" type="password" placeholder="可选：Bearer Token" />
+              </label>
+              <label class="field">
+                <span>上传接口路径</span>
+                <input v-model.trim="siteForm.cfbedUploadPath" placeholder="/upload" />
               </label>
               <label class="field">
                 <span>上传渠道 / Channel</span>

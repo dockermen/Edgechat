@@ -214,6 +214,7 @@ test("站点设置 projection 使用稳定默认值", async () => {
 		cfbedAuthCode: "",
 		cfbedBaseUrl: "",
 		cfbedChannelName: "",
+		cfbedUploadPath: "/upload",
 		cfbedUploadChannel: "",
 		cfbedUploadFolder: "",
 		dingtalkPushContent: false,

@@ -45,6 +45,7 @@ export function registerAdminRoutes(app) {
     const cfbedBaseUrl = String(payload.cfbedBaseUrl || '').trim();
     const cfbedAuthCode = String(payload.cfbedAuthCode || '').trim();
     const cfbedApiToken = String(payload.cfbedApiToken || '').trim();
+    const cfbedUploadPath = String(payload.cfbedUploadPath || '/upload').trim() || '/upload';
     const cfbedUploadChannel = String(payload.cfbedUploadChannel || '').trim();
     const cfbedChannelName = String(payload.cfbedChannelName || '').trim();
     const cfbedUploadFolder = String(payload.cfbedUploadFolder || '').trim();
@@ -62,6 +63,7 @@ export function registerAdminRoutes(app) {
       cfbedBaseUrl,
       cfbedAuthCode,
       cfbedApiToken,
+      cfbedUploadPath,
       cfbedUploadChannel,
       cfbedChannelName,
       cfbedUploadFolder,

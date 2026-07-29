@@ -66,29 +66,45 @@ function appendOptionalParam(url, key, value) {
   }
 }
 
-function extractCfbedUrl(payload) {
+function resolveCfbedUrl(baseUrl, value) {
+  const text = String(value || '').trim();
+  if (!text) return '';
+  if (/^https?:\/\//i.test(text)) return text;
+  if (text.startsWith('/')) return `${baseUrl}${text}`;
+  return `${baseUrl}/${text}`;
+}
+
+function extractCfbedUrl(payload, baseUrl) {
   if (!payload) return '';
-  if (typeof payload === 'string') return payload;
+  if (typeof payload === 'string') return resolveCfbedUrl(baseUrl, payload);
   const candidates = [
-    payload.url, payload.src, payload.href, payload.link, payload.fullUrl,
-    payload.publicUrl, payload.data?.url, payload.data?.src, payload.data?.href,
-    payload.data?.fullUrl, payload.data?.publicUrl, payload.data?.links?.url,
+    payload.publicUrl, payload.fullUrl, payload.url, payload.src, payload.href, payload.link,
+    payload.data?.publicUrl, payload.data?.fullUrl, payload.data?.url, payload.data?.src,
+    payload.data?.href, payload.data?.links?.url,
   ];
   for (const candidate of candidates) {
-    if (typeof candidate === 'string' && /^https?:\/\//i.test(candidate)) {
-      return candidate;
-    }
+    const found = resolveCfbedUrl(baseUrl, candidate);
+    if (found) return found;
   }
   const arrays = [payload.data, payload.files, payload.images, payload.result];
   for (const value of arrays) {
     if (Array.isArray(value)) {
       for (const item of value) {
-        const found = extractCfbedUrl(item);
+        const found = extractCfbedUrl(item, baseUrl);
         if (found) return found;
       }
     }
   }
   return '';
+}
+
+function resolveCfbedUploadUrl(settings, baseUrl) {
+  const rawPath = String(settings.cfbedUploadPath || '/upload').trim() || '/upload';
+  const uploadUrl = /^https?:\/\//i.test(rawPath)
+    ? new URL(rawPath)
+    : new URL(rawPath.startsWith('/') ? `${baseUrl}${rawPath}` : `${baseUrl}/${rawPath}`);
+  uploadUrl.searchParams.set('returnFormat', 'full');
+  return uploadUrl;
 }
 
 async function uploadToCfbed(settings, file) {
@@ -97,15 +113,14 @@ async function uploadToCfbed(settings, file) {
     throw new Error('请先配置 CFBed 图床地址');
   }
 
-  const uploadUrl = new URL(`${baseUrl}/api/upload`);
+  const uploadUrl = resolveCfbedUploadUrl(settings, baseUrl);
   appendOptionalParam(uploadUrl, 'authCode', settings.cfbedAuthCode);
-  appendOptionalParam(uploadUrl, 'channel', settings.cfbedUploadChannel);
+  appendOptionalParam(uploadUrl, 'uploadChannel', settings.cfbedUploadChannel);
   appendOptionalParam(uploadUrl, 'channelName', settings.cfbedChannelName);
-  appendOptionalParam(uploadUrl, 'folder', settings.cfbedUploadFolder);
+  appendOptionalParam(uploadUrl, 'uploadFolder', settings.cfbedUploadFolder);
 
   const form = new FormData();
   form.append('file', file, file.name);
-  form.append('image', file, file.name);
 
   const headers = new Headers();
   if (settings.cfbedApiToken) {
@@ -119,7 +134,7 @@ async function uploadToCfbed(settings, file) {
   if (!response.ok) {
     throw new Error(`CFBed 上传失败：${response.status}`);
   }
-  const url = extractCfbedUrl(payload);
+  const url = extractCfbedUrl(payload, baseUrl);
   if (!url) {
     throw new Error('CFBed 上传成功但未返回可访问 URL');
   }

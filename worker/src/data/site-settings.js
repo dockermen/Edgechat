@@ -12,6 +12,7 @@ export async function getSiteSettings(db) {
 		cfbedBaseUrl: String(map.cfbed_base_url || ""),
 		cfbedAuthCode: String(map.cfbed_auth_code || ""),
 		cfbedApiToken: String(map.cfbed_api_token || ""),
+		cfbedUploadPath: String(map.cfbed_upload_path || "/upload"),
 		cfbedUploadChannel: String(map.cfbed_upload_channel || ""),
 		cfbedChannelName: String(map.cfbed_channel_name || ""),
 		cfbedUploadFolder: String(map.cfbed_upload_folder || ""),
@@ -35,7 +36,7 @@ function upsertSetting(db, key, value) {
 export async function updateSiteSettings(db, settings) {
 	const {
 		siteName, siteIconUrl, attachmentStorage, cfbedBaseUrl, cfbedAuthCode,
-		cfbedApiToken, cfbedUploadChannel, cfbedChannelName, cfbedUploadFolder,
+		cfbedApiToken, cfbedUploadPath, cfbedUploadChannel, cfbedChannelName, cfbedUploadFolder,
 		dingtalkWebhookUrl, dingtalkPushContent,
 	} = settings;
 	const statements = [];
@@ -50,6 +51,7 @@ export async function updateSiteSettings(db, settings) {
 		["cfbed_base_url", cfbedBaseUrl],
 		["cfbed_auth_code", cfbedAuthCode],
 		["cfbed_api_token", cfbedApiToken],
+		["cfbed_upload_path", cfbedUploadPath],
 		["cfbed_upload_channel", cfbedUploadChannel],
 		["cfbed_channel_name", cfbedChannelName],
 		["cfbed_upload_folder", cfbedUploadFolder],
