@@ -22,15 +22,21 @@
 .message-attachment__image,
 .message-attachment__video {
   display: block;
-  width: 100%;
-  max-height: 320px;
-  object-fit: contain;
   border-radius: 16px;
   background: rgba(31, 37, 33, 0.08);
 }
 
+.message-attachment__image {
+  width: 100%;
+  max-height: 320px;
+  object-fit: contain;
+}
+
 .message-attachment__video {
-  min-height: 180px;
+  width: auto;
+  max-width: 100%;
+  max-height: min(520px, 68vh);
+  object-fit: contain;
   outline: none;
 }
 
@@ -127,13 +133,12 @@
     max-width: min(300px, 78vw);
   }
 
-  .message-attachment__image,
-  .message-attachment__video {
+  .message-attachment__image {
     max-height: 260px;
   }
 
   .message-attachment__video {
-    min-height: 160px;
+    max-height: min(460px, 62vh);
   }
 
   .image-preview-overlay {
