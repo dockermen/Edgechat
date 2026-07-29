@@ -15,6 +15,7 @@ export function createMessageSubmission({ persistMessage = insertMessage } = {})
 				senderId: meta.principal.userId,
 				content: payload.content,
 				attachment: payload.attachment,
+				replyToMessageId: payload.replyToMessageId,
 			});
 			return {
 				message,

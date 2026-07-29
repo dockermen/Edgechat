@@ -51,10 +51,10 @@ function handleRoomAccessRevoked(room) {
 }
 
 const {
-  messages, loading, wsStatus, composerText, pendingAttachment, sending,
+  messages, loading, wsStatus, composerText, pendingAttachment, replyToMessage, sending,
   messagesEl, fileInputEl, isOwnMessage,
   loadMessages, connectSocket, disconnectSocket, sendMessage, handleComposerKeydown,
-  openFilePicker, uploadAttachment, clearAttachment, loadOlder
+  openFilePicker, uploadAttachment, clearAttachment, setReplyTo, clearReplyTo, loadOlder
 } = useChatRoom({
   activeRoom,
   session,
@@ -134,6 +134,19 @@ async function selectConversation(item) {
 
 function logout() { store.logout(); router.push('/login'); }
 function openAdmin() { router.push('/admin'); }
+function closeRoomOnMobile() { activeRoom.value = null; }
+function replyPreviewText(message) {
+  if (!message) return '';
+  return message.content || message.attachment?.name || message.attachmentName || '[附件]';
+}
+function scrollToQuoted(messageId) {
+  const target = messagesEl.value?.querySelector(`[data-message-id="${messageId}"]`);
+  if (target) {
+    target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    target.classList.add('message-row--highlight');
+    window.setTimeout(() => target.classList.remove('message-row--highlight'), 1200);
+  }
+}
 
 async function bootstrap() {
   error.value = '';
@@ -170,7 +183,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="chat-layout">
+  <div class="chat-layout" :class="{ 'chat-layout--room-open': activeRoom }">
     <!-- Far-Left Navigation Sidebar -->
     <aside class="right-sidebar">
       <div class="right-sidebar-inner">
@@ -253,6 +266,11 @@ onBeforeUnmount(() => {
     <main class="chat-main">
       <template v-if="activeRoom">
         <header class="chat-header">
+          <button type="button" class="chat-header__back" aria-label="返回会话列表" @click="closeRoomOnMobile">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M15 18l-6-6 6-6"/>
+            </svg>
+          </button>
           <h2>{{ roomLabel(activeRoom) }}</h2>
           <div class="chat-header__actions">
             <div class="chat-header__status" :class="wsConnected ? 'online' : 'offline'"></div>
@@ -273,6 +291,7 @@ onBeforeUnmount(() => {
           <article
             v-for="msg in messages" :key="msg.id"
             class="message-row" :class="{ 'message-row--own': isOwnMessage(msg) }"
+            :data-message-id="msg.id"
           >
             <div
               class="message-bubble"
@@ -281,14 +300,33 @@ onBeforeUnmount(() => {
               <div v-if="activeRoom.kind !== 'dm' && !isOwnMessage(msg)" class="message-sender-name">
                 {{ msg.sender.displayName }}
               </div>
+              <button
+                v-if="msg.replyTo"
+                type="button"
+                class="message-quote"
+                @click="scrollToQuoted(msg.replyTo.id)"
+              >
+                <strong>{{ msg.replyTo.sender.displayName || '原消息' }}</strong>
+                <span>{{ replyPreviewText(msg.replyTo) }}</span>
+              </button>
               <p v-if="msg.content">{{ msg.content }}</p>
               <MessageAttachment v-if="msg.attachment" :attachment="msg.attachment" />
+              <div class="message-actions">
+                <button type="button" class="message-action" @click="setReplyTo(msg)">引用</button>
+              </div>
               <span class="message-time">{{ formatBubbleTime(msg.createdAt) }}</span>
             </div>
           </article>
         </section>
 
         <footer class="chat-composer">
+          <div v-if="replyToMessage" class="composer-reply">
+            <div class="composer-reply__body">
+              <strong>引用 {{ replyToMessage.sender.displayName }}</strong>
+              <span>{{ replyPreviewText(replyToMessage) }}</span>
+            </div>
+            <button type="button" class="composer-reply__close" aria-label="取消引用" @click="clearReplyTo">×</button>
+          </div>
           <div v-if="pendingAttachment" class="composer-attachment">
             <PendingAttachmentPreview :attachment="pendingAttachment" @clear="clearAttachment" />
           </div>
@@ -378,6 +416,7 @@ onBeforeUnmount(() => {
 .chat-layout {
   display: flex;
   height: 100vh;
+  height: 100dvh;
   background: #efeae2;
   width: 100%;
 }
@@ -386,6 +425,7 @@ onBeforeUnmount(() => {
   flex-shrink: 0;
   width: 350px;
   height: 100vh;
+  height: 100dvh;
   position: relative;
   z-index: 10;
   overflow: hidden;
@@ -563,6 +603,7 @@ onBeforeUnmount(() => {
   flex-shrink: 0;
   width: 68px;
   height: 100vh;
+  height: 100dvh;
   position: relative;
   z-index: 10;
   overflow: hidden;
@@ -672,6 +713,25 @@ onBeforeUnmount(() => {
   gap: 8px;
 }
 
+.chat-header__back {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin-left: -8px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: #54656f;
+  cursor: pointer;
+}
+
+.chat-header__back:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: #111b21;
+}
+
 .chat-header__button {
   padding: 6px 10px;
   border: 1px solid #d8dee2;
@@ -751,6 +811,12 @@ onBeforeUnmount(() => {
   margin-bottom: 12px;
   width: 100%;
   justify-content: flex-start;
+  transition: background 180ms ease;
+}
+
+.message-row--highlight {
+  background: rgba(37, 211, 102, 0.16);
+  border-radius: 12px;
 }
 
 .message-row--own {
@@ -781,6 +847,67 @@ onBeforeUnmount(() => {
   font-weight: 600;
   color: #008069;
   margin-bottom: 4px;
+}
+
+.message-quote {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  margin: 0 0 6px;
+  padding: 7px 9px;
+  border: 0;
+  border-left: 3px solid #06cf9c;
+  border-radius: 7px;
+  background: rgba(0, 0, 0, 0.05);
+  color: #54656f;
+  cursor: pointer;
+  text-align: left;
+}
+
+.message-quote strong,
+.composer-reply__body strong {
+  color: #008069;
+  font-size: 12px;
+}
+
+.message-quote span,
+.composer-reply__body span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12.5px;
+}
+
+.message-actions {
+  position: absolute;
+  top: 50%;
+  right: calc(100% + 6px);
+  transform: translateY(-50%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms ease;
+}
+
+.message-row:not(.message-row--own) .message-actions {
+  left: calc(100% + 6px);
+  right: auto;
+}
+
+.message-bubble:hover .message-actions,
+.message-bubble:focus-within .message-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.message-action {
+  border: 1px solid #e8ecf0;
+  border-radius: 999px;
+  background: #fff;
+  color: #54656f;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 4px 8px;
+  box-shadow: 0 1px 4px rgba(11, 20, 26, 0.12);
 }
 
 .message-time {
@@ -826,6 +953,40 @@ onBeforeUnmount(() => {
 
 .composer-attachment {
   margin-bottom: 10px;
+}
+
+.composer-reply {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  border-left: 3px solid #06cf9c;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.composer-reply__body {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.composer-reply__close {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: #54656f;
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.composer-reply__close:hover {
+  background: rgba(0, 0, 0, 0.06);
 }
 
 .composer-error {
@@ -955,17 +1116,23 @@ onBeforeUnmount(() => {
   width: 340px;
   flex-shrink: 0;
   height: 100vh;
+  height: 100dvh;
   overflow-y: auto;
   background: #f7f9fa;
   border-left: 1px solid #e9edef;
 }
 
 @media (max-width: 768px) {
-  .left-sidebar {
-    width: 280px;
+  .chat-layout {
+    overflow: hidden;
   }
+
+  .left-sidebar {
+    width: calc(100vw - 56px);
+  }
+
   .right-sidebar {
-    width: 60px;
+    width: 56px;
     padding: 10px 4px;
   }
   .right-sidebar-inner {
@@ -976,12 +1143,91 @@ onBeforeUnmount(() => {
     width: 36px;
     height: 36px;
   }
+  .chat-main {
+    display: none;
+    width: 100vw;
+    flex: 0 0 100vw;
+  }
+
+  .chat-layout--room-open .right-sidebar,
+  .chat-layout--room-open .left-sidebar {
+    display: none;
+  }
+
+  .chat-layout--room-open .chat-main {
+    display: flex;
+  }
+
+  .chat-header {
+    min-height: 54px;
+    padding: max(8px, env(safe-area-inset-top)) 10px 8px;
+  }
+
+  .chat-header__back {
+    display: inline-flex;
+    flex-shrink: 0;
+  }
+
+  .chat-header h2 {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .chat-header__actions {
+    flex-shrink: 0;
+  }
+
+  .chat-header__button {
+    padding: 6px 8px;
+  }
+
+  .chat-messages {
+    padding: 14px 10px;
+  }
+
+  .message-bubble {
+    max-width: 84%;
+  }
+
+  .message-actions {
+    position: static;
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 4px;
+    transform: none;
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .message-action {
+    padding: 2px 6px;
+    font-size: 11px;
+    background: rgba(255, 255, 255, 0.72);
+  }
+
+  .chat-composer {
+    padding: 8px 10px max(8px, env(safe-area-inset-bottom));
+  }
+
+  .composer-row {
+    gap: 8px;
+  }
+
+  .composer-btn,
+  .composer-send {
+    width: 36px;
+    height: 36px;
+  }
+
   .room-management-sidebar {
     position: fixed;
     top: 0;
     right: 0;
     z-index: 30;
     width: min(340px, 92vw);
+    height: 100dvh;
     box-shadow: -12px 0 30px rgba(11, 20, 26, 0.16);
   }
 }

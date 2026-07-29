@@ -21,6 +21,7 @@ export function useChatRoom({
 	const wsStatus = ref("closed");
 	const composerText = ref("");
 	const pendingAttachment = ref(null);
+	const replyToMessage = ref(null);
 	const sending = ref(false);
 	const messagesEl = ref(null);
 	const fileInputEl = ref(null);
@@ -164,11 +165,13 @@ export function useChatRoom({
 					type: "send",
 					content: composerText.value,
 					attachment: pendingAttachment.value,
+					replyToMessageId: replyToMessage.value?.id || null,
 				}),
 				key,
 			);
 			composerText.value = "";
 			pendingAttachment.value = null;
+			replyToMessage.value = null;
 		} catch (currentError) {
 			error.value = currentError.message;
 		} finally {
@@ -207,6 +210,14 @@ export function useChatRoom({
 		pendingAttachment.value = null;
 	}
 
+	function setReplyTo(message) {
+		replyToMessage.value = message;
+	}
+
+	function clearReplyTo() {
+		replyToMessage.value = null;
+	}
+
 	async function loadOlder() {
 		if (loading.value) {
 			return;
@@ -231,6 +242,7 @@ export function useChatRoom({
 		wsStatus,
 		composerText,
 		pendingAttachment,
+		replyToMessage,
 		sending,
 		messagesEl,
 		fileInputEl,
@@ -243,6 +255,8 @@ export function useChatRoom({
 		openFilePicker,
 		uploadAttachment,
 		clearAttachment,
+		setReplyTo,
+		clearReplyTo,
 		loadOlder,
 	};
 }

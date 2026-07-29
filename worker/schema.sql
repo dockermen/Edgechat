@@ -102,10 +102,12 @@ CREATE TABLE IF NOT EXISTS messages (
   attachment_name TEXT,
   attachment_type TEXT,
   attachment_size INTEGER,
+  reply_to_message_id INTEGER,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   deleted_at TEXT,
   FOREIGN KEY (channel_id) REFERENCES channels(id),
-  FOREIGN KEY (sender_id) REFERENCES users(id)
+  FOREIGN KEY (sender_id) REFERENCES users(id),
+  FOREIGN KEY (reply_to_message_id) REFERENCES messages(id)
 );
 
 CREATE TABLE IF NOT EXISTS message_reads (
@@ -157,6 +159,9 @@ CREATE INDEX IF NOT EXISTS idx_messages_channel_created
 
 CREATE INDEX IF NOT EXISTS idx_messages_sender_created
   ON messages(sender_id, id DESC);
+
+CREATE INDEX IF NOT EXISTS idx_messages_reply_to
+  ON messages(reply_to_message_id);
 
 CREATE INDEX IF NOT EXISTS idx_message_reads_user
   ON message_reads(user_id, updated_at DESC);
