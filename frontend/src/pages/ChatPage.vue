@@ -881,7 +881,8 @@ onBeforeUnmount(() => {
 .message-actions {
   position: absolute;
   top: 50%;
-  right: calc(100% + 6px);
+  right: calc(100% - 2px);
+  padding: 8px;
   transform: translateY(-50%);
   opacity: 0;
   pointer-events: none;
@@ -889,12 +890,14 @@ onBeforeUnmount(() => {
 }
 
 .message-row:not(.message-row--own) .message-actions {
-  left: calc(100% + 6px);
+  left: calc(100% - 2px);
   right: auto;
 }
 
+.message-row:hover .message-actions,
 .message-bubble:hover .message-actions,
-.message-bubble:focus-within .message-actions {
+.message-bubble:focus-within .message-actions,
+.message-actions:hover {
   opacity: 1;
   pointer-events: auto;
 }
@@ -1196,6 +1199,7 @@ onBeforeUnmount(() => {
     display: flex;
     justify-content: flex-end;
     margin-top: 4px;
+    padding: 0;
     transform: none;
     opacity: 1;
     pointer-events: auto;
