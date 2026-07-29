@@ -22,7 +22,16 @@ const copiedInviteId = ref(0);
 const siteForm = reactive({
   siteName: 'Edgechat',
   siteIconUrl: '',
-  allowPublicRegister: false
+  allowPublicRegister: false,
+  attachmentStorage: 'r2',
+  cfbedBaseUrl: '',
+  cfbedAuthCode: '',
+  cfbedApiToken: '',
+  cfbedUploadChannel: '',
+  cfbedChannelName: '',
+  cfbedUploadFolder: '',
+  dingtalkWebhookUrl: '',
+  dingtalkPushContent: false
 });
 const inviteForm = reactive({
   note: ''
@@ -46,6 +55,15 @@ async function loadOverview() {
     siteForm.siteName = payload.site?.siteName || 'Edgechat';
     siteForm.siteIconUrl = payload.site?.siteIconUrl || '';
     siteForm.allowPublicRegister = payload.site?.allowPublicRegister || false;
+    siteForm.attachmentStorage = payload.site?.attachmentStorage || 'r2';
+    siteForm.cfbedBaseUrl = payload.site?.cfbedBaseUrl || '';
+    siteForm.cfbedAuthCode = payload.site?.cfbedAuthCode || '';
+    siteForm.cfbedApiToken = payload.site?.cfbedApiToken || '';
+    siteForm.cfbedUploadChannel = payload.site?.cfbedUploadChannel || '';
+    siteForm.cfbedChannelName = payload.site?.cfbedChannelName || '';
+    siteForm.cfbedUploadFolder = payload.site?.cfbedUploadFolder || '';
+    siteForm.dingtalkWebhookUrl = payload.site?.dingtalkWebhookUrl || '';
+    siteForm.dingtalkPushContent = Boolean(payload.site?.dingtalkPushContent);
     const invitePayload = await api.listAdminRegisterLinks();
     invites.value = invitePayload.invites || [];
   } catch (currentError) {
@@ -86,6 +104,15 @@ async function saveSiteSettings() {
     siteForm.siteName = payload.site.siteName;
     siteForm.siteIconUrl = payload.site.siteIconUrl;
     siteForm.allowPublicRegister = payload.site.allowPublicRegister || false;
+    siteForm.attachmentStorage = payload.site.attachmentStorage || 'r2';
+    siteForm.cfbedBaseUrl = payload.site.cfbedBaseUrl || '';
+    siteForm.cfbedAuthCode = payload.site.cfbedAuthCode || '';
+    siteForm.cfbedApiToken = payload.site.cfbedApiToken || '';
+    siteForm.cfbedUploadChannel = payload.site.cfbedUploadChannel || '';
+    siteForm.cfbedChannelName = payload.site.cfbedChannelName || '';
+    siteForm.cfbedUploadFolder = payload.site.cfbedUploadFolder || '';
+    siteForm.dingtalkWebhookUrl = payload.site.dingtalkWebhookUrl || '';
+    siteForm.dingtalkPushContent = Boolean(payload.site.dingtalkPushContent);
     store.setSite(payload.site);
   } catch (currentError) {
     error.value = currentError.message;
@@ -190,6 +217,56 @@ onMounted(loadOverview);
             <input type="checkbox" v-model="siteForm.allowPublicRegister" />
             <span>允许公开注册（用户可自行注册账号）</span>
           </label>
+
+          <div class="settings-subpanel">
+            <h4>附件图床</h4>
+            <label class="field">
+              <span>存储方式</span>
+              <select v-model="siteForm.attachmentStorage">
+                <option value="r2">Cloudflare R2（默认）</option>
+                <option value="cfbed">CFBed 图床</option>
+              </select>
+            </label>
+            <template v-if="siteForm.attachmentStorage === 'cfbed'">
+              <label class="field">
+                <span>CFBed 地址</span>
+                <input v-model.trim="siteForm.cfbedBaseUrl" placeholder="https://cfbed.example.com" />
+              </label>
+              <label class="field">
+                <span>鉴权码 authCode</span>
+                <input v-model.trim="siteForm.cfbedAuthCode" placeholder="可选：图床鉴权码" />
+              </label>
+              <label class="field">
+                <span>API Token</span>
+                <input v-model.trim="siteForm.cfbedApiToken" type="password" placeholder="可选：Bearer Token" />
+              </label>
+              <label class="field">
+                <span>上传渠道 / Channel</span>
+                <input v-model.trim="siteForm.cfbedUploadChannel" placeholder="可选：例如 telegram、s3、r2" />
+              </label>
+              <label class="field">
+                <span>渠道名称 / ChannelName</span>
+                <input v-model.trim="siteForm.cfbedChannelName" placeholder="可选：CFBed 中配置的渠道名" />
+              </label>
+              <label class="field">
+                <span>上传目录</span>
+                <input v-model.trim="siteForm.cfbedUploadFolder" placeholder="可选：Edgechat" />
+              </label>
+            </template>
+          </div>
+
+          <div class="settings-subpanel">
+            <h4>钉钉推送</h4>
+            <label class="field">
+              <span>钉钉机器人 Webhook</span>
+              <input v-model.trim="siteForm.dingtalkWebhookUrl" placeholder="https://oapi.dingtalk.com/robot/send?..." />
+            </label>
+            <label class="field field--checkbox">
+              <input type="checkbox" v-model="siteForm.dingtalkPushContent" />
+              <span>推送消息内容（关闭时只推送“来自谁谁的新消息”）</span>
+            </label>
+          </div>
+
           <div class="inline-actions">
             <input
               ref="iconFileInputEl"
@@ -434,7 +511,8 @@ onMounted(loadOverview);
   font-weight: 500;
 }
 
-:deep(.field input) {
+:deep(.field input),
+:deep(.field select) {
   padding: 10px 12px !important;
   font-size: 13px !important;
   border-radius: 10px !important;
@@ -443,10 +521,26 @@ onMounted(loadOverview);
   transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
-:deep(.field input:focus) {
+:deep(.field input:focus),
+:deep(.field select:focus) {
   border-color: rgba(91, 141, 191, 0.4) !important;
   box-shadow: 0 0 0 3px rgba(91, 141, 191, 0.1) !important;
   background: rgba(255, 255, 255, 0.9) !important;
+}
+
+.settings-subpanel {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(91, 141, 191, 0.045);
+  border: 1px solid rgba(91, 141, 191, 0.1);
+}
+
+.settings-subpanel h4 {
+  margin: 0;
+  font-size: 12px;
+  color: #2c4a6e;
 }
 
 .field--checkbox {

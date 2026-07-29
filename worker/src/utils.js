@@ -50,7 +50,11 @@ export function pickAttachment(payload) {
 }
 
 export function publicFileUrl(key) {
-  return `/files/${encodeURIComponent(key)}`;
+  const value = String(key || '');
+  if (/^https?:\/\//i.test(value)) {
+    return value;
+  }
+  return `/files/${encodeURIComponent(value)}`;
 }
 
 export function nextDailyUtcHour(hour) {

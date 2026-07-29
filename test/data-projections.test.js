@@ -208,14 +208,27 @@ test("站点设置 projection 使用稳定默认值", async () => {
 		{ setting_key: "site_name", setting_value: "CFChat" },
 		{ setting_key: "site_icon_url", setting_value: "/icon.png" },
 	]);
+	const expectedDefaults = {
+		attachmentStorage: "r2",
+		cfbedApiToken: "",
+		cfbedAuthCode: "",
+		cfbedBaseUrl: "",
+		cfbedChannelName: "",
+		cfbedUploadChannel: "",
+		cfbedUploadFolder: "",
+		dingtalkPushContent: false,
+		dingtalkWebhookUrl: "",
+	};
 	assert.deepEqual(await getSiteSettings(configured.db), {
 		siteName: "CFChat",
 		siteIconUrl: "/icon.png",
+		...expectedDefaults,
 	});
 	const defaults = createQueryDb([]);
 	assert.deepEqual(await getSiteSettings(defaults.db), {
 		siteName: "Edgechat",
 		siteIconUrl: "",
+		...expectedDefaults,
 	});
 });
 

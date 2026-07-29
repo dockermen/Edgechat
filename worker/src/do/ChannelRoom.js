@@ -1,6 +1,7 @@
 import { MessageSubmissionError, submitRoomMessage } from '../message-submission.js';
 import { authorizeRoom } from '../room-access.js';
 import { validateSession } from '../session.js';
+import { sendDingTalkMessageNotification } from '../notifications.js';
 import { projectUnreadMessage } from '../unread-projection.js';
 import { parseVerifiedPrincipal } from '../verified-identity.js';
 
@@ -225,11 +226,17 @@ export class ChannelRoom {
 
       // 未读投影不影响消息提交结果，交给 DO 生命周期继续完成，缩短发送链路。
       this.state.waitUntil(
-        projectUnreadMessage(this.env, {
-          room: currentMeta.room,
-          senderId: currentMeta.principal.userId,
-          message: saved
-        })
+        Promise.allSettled([
+          projectUnreadMessage(this.env, {
+            room: currentMeta.room,
+            senderId: currentMeta.principal.userId,
+            message: saved
+          }),
+          sendDingTalkMessageNotification(this.env, {
+            room: currentMeta.room,
+            message: saved
+          })
+        ])
       );
     } catch (error) {
       if (error instanceof MessageSubmissionError) {

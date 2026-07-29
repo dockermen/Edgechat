@@ -41,12 +41,33 @@ export function registerAdminRoutes(app) {
     const payload = await parseJsonRequest(c.req.raw);
     const siteName = String(payload.siteName || '').trim();
     const siteIconUrl = String(payload.siteIconUrl || '').trim();
+    const attachmentStorage = String(payload.attachmentStorage || 'r2').trim() === 'cfbed' ? 'cfbed' : 'r2';
+    const cfbedBaseUrl = String(payload.cfbedBaseUrl || '').trim();
+    const cfbedAuthCode = String(payload.cfbedAuthCode || '').trim();
+    const cfbedApiToken = String(payload.cfbedApiToken || '').trim();
+    const cfbedUploadChannel = String(payload.cfbedUploadChannel || '').trim();
+    const cfbedChannelName = String(payload.cfbedChannelName || '').trim();
+    const cfbedUploadFolder = String(payload.cfbedUploadFolder || '').trim();
+    const dingtalkWebhookUrl = String(payload.dingtalkWebhookUrl || '').trim();
+    const dingtalkPushContent = Boolean(payload.dingtalkPushContent);
 
     if (!siteName) {
       return errorResponse('站点名称不能为空');
     }
 
-    const site = await updateSiteSettings(c.env.DB, { siteName, siteIconUrl });
+    const site = await updateSiteSettings(c.env.DB, {
+      siteName,
+      siteIconUrl,
+      attachmentStorage,
+      cfbedBaseUrl,
+      cfbedAuthCode,
+      cfbedApiToken,
+      cfbedUploadChannel,
+      cfbedChannelName,
+      cfbedUploadFolder,
+      dingtalkWebhookUrl,
+      dingtalkPushContent
+    });
     return c.json({ site });
   });
 

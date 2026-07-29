@@ -1,3 +1,4 @@
+import { getSiteSettings } from '../data/site-settings.js';
 import { errorResponse } from '../utils.js';
 
 const FILE_BROWSER_CACHE_CONTROL = 'public, max-age=31536000, immutable';
@@ -53,6 +54,84 @@ function contentDispositionValue(kind, filename) {
   return `${kind}; filename="${safeAscii}"; filename*=UTF-8''${encodeURIComponent(safeUtf8)}`;
 }
 
+
+function normalizeBaseUrl(value) {
+  return String(value || '').trim().replace(/\/+$/, '');
+}
+
+function appendOptionalParam(url, key, value) {
+  const text = String(value || '').trim();
+  if (text) {
+    url.searchParams.set(key, text);
+  }
+}
+
+function extractCfbedUrl(payload) {
+  if (!payload) return '';
+  if (typeof payload === 'string') return payload;
+  const candidates = [
+    payload.url, payload.src, payload.href, payload.link, payload.fullUrl,
+    payload.publicUrl, payload.data?.url, payload.data?.src, payload.data?.href,
+    payload.data?.fullUrl, payload.data?.publicUrl, payload.data?.links?.url,
+  ];
+  for (const candidate of candidates) {
+    if (typeof candidate === 'string' && /^https?:\/\//i.test(candidate)) {
+      return candidate;
+    }
+  }
+  const arrays = [payload.data, payload.files, payload.images, payload.result];
+  for (const value of arrays) {
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        const found = extractCfbedUrl(item);
+        if (found) return found;
+      }
+    }
+  }
+  return '';
+}
+
+async function uploadToCfbed(settings, file) {
+  const baseUrl = normalizeBaseUrl(settings.cfbedBaseUrl);
+  if (!baseUrl) {
+    throw new Error('请先配置 CFBed 图床地址');
+  }
+
+  const uploadUrl = new URL(`${baseUrl}/api/upload`);
+  appendOptionalParam(uploadUrl, 'authCode', settings.cfbedAuthCode);
+  appendOptionalParam(uploadUrl, 'channel', settings.cfbedUploadChannel);
+  appendOptionalParam(uploadUrl, 'channelName', settings.cfbedChannelName);
+  appendOptionalParam(uploadUrl, 'folder', settings.cfbedUploadFolder);
+
+  const form = new FormData();
+  form.append('file', file, file.name);
+  form.append('image', file, file.name);
+
+  const headers = new Headers();
+  if (settings.cfbedApiToken) {
+    headers.set('Authorization', `Bearer ${settings.cfbedApiToken}`);
+  }
+
+  const response = await fetch(uploadUrl, { method: 'POST', headers, body: form });
+  const text = await response.text();
+  let payload = null;
+  try { payload = text ? JSON.parse(text) : null; } catch { payload = text; }
+  if (!response.ok) {
+    throw new Error(`CFBed 上传失败：${response.status}`);
+  }
+  const url = extractCfbedUrl(payload);
+  if (!url) {
+    throw new Error('CFBed 上传成功但未返回可访问 URL');
+  }
+  return {
+    key: url,
+    name: file.name,
+    type: file.type || 'application/octet-stream',
+    size: file.size,
+    url
+  };
+}
+
 function validateUpload(env, file) {
   const maxFileSize = Number(env.MAX_UPLOAD_FILE_SIZE || env.MAX_FILE_SIZE || DEFAULT_MAX_FILE_SIZE);
   if (file.size > maxFileSize) {
@@ -87,6 +166,16 @@ export function registerUploadRoutes(app) {
       validateUpload(c.env, file);
     } catch (error) {
       return errorResponse(error.message);
+    }
+
+    const settings = await getSiteSettings(c.env.DB);
+    if (settings.attachmentStorage === 'cfbed') {
+      try {
+        const cfbedFile = await uploadToCfbed(settings, file);
+        return c.json({ file: cfbedFile });
+      } catch (error) {
+        return errorResponse(error.message);
+      }
     }
 
     const extension = file.name.includes('.') ? file.name.slice(file.name.lastIndexOf('.')) : '';

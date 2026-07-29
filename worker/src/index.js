@@ -12,7 +12,7 @@ import {
 import { listVisibleChannels } from './data/channels.js';
 import { listUserDms } from './data/dm-queries.js';
 import { ensureGeneralChannelMembership } from './data/general-channel.js';
-import { getSiteSettings } from './data/site-settings.js';
+import { getSiteSettings, publicSiteSettings } from './data/site-settings.js';
 import { getUserByUsername, listActiveUsers } from './data/users.js';
 import { ApiError } from './errors.js';
 import { adminMiddleware, authMiddleware } from './middleware.js';
@@ -53,7 +53,7 @@ app.use('/api/*', cors({
 app.get('/api/health', (c) => c.json({ ok: true }));
 
 app.get('/api/site', async (c) => {
-  const site = await getSiteSettings(c.env.DB);
+  const site = publicSiteSettings(await getSiteSettings(c.env.DB));
   return c.json({ site });
 });
 
@@ -63,7 +63,7 @@ app.get('/api/register-links/:token', async (c) => {
     return errorResponse('注册链接不存在', 404);
   }
 
-  const site = await getSiteSettings(c.env.DB);
+  const site = publicSiteSettings(await getSiteSettings(c.env.DB));
   const invite = await c.env.DB.prepare(
     `SELECT id, note, created_at, consumed_at, deleted_at
      FROM registration_invites

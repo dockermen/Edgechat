@@ -1,5 +1,5 @@
 import { listMessages } from '../data/messages.js';
-import { markRoomRead } from '../data/unread.js';
+import { listMessageReadStatus, markRoomRead } from '../data/unread.js';
 import { authorizeRoom, isRoomKind } from '../room-access.js';
 import { errorResponse, parseJsonRequest, sanitizeLimit } from '../utils.js';
 
@@ -35,6 +35,29 @@ export function registerMessageRoutes(app) {
         description: access.room.description
       },
       messages
+    });
+  });
+
+  app.get('/api/messages/:messageId/read-status', async (c) => {
+    const session = c.get('session');
+    const kind = c.req.query('kind');
+    const roomId = Number(c.req.query('roomId'));
+    const messageId = Number(c.req.param('messageId'));
+
+    if (!isRoomKind(kind) || !Number.isInteger(roomId) || roomId <= 0 || !Number.isInteger(messageId) || messageId <= 0) {
+      return errorResponse('参数无效');
+    }
+
+    const access = await authorizeRoom(c.env.DB, session, kind, roomId);
+    if (!access.ok) {
+      return errorResponse('无权访问该会话', 403);
+    }
+
+    const members = await listMessageReadStatus(c.env.DB, { channelId: roomId, messageId });
+    return c.json({
+      messageId,
+      read: members.filter((item) => item.read),
+      unread: members.filter((item) => !item.read)
     });
   });
 

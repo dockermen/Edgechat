@@ -56,3 +56,39 @@ export async function listRoomMemberIds(db, channelId) {
 		.map((row) => Number(row.user_id))
 		.filter((userId) => Number.isFinite(userId));
 }
+
+
+export async function listMessageReadStatus(db, { channelId, messageId }) {
+	const { results } = await db
+		.prepare(
+			`SELECT
+			   u.id,
+			   u.username,
+			   u.display_name,
+			   u.avatar_key,
+			   COALESCE(mr.last_read_message_id, 0) AS last_read_message_id,
+			   mr.updated_at AS read_at,
+			   m.sender_id AS message_sender_id
+			 FROM channel_members cm
+			 JOIN users u ON u.id = cm.user_id
+			 JOIN messages m ON m.id = ? AND m.channel_id = cm.channel_id AND m.deleted_at IS NULL
+			 LEFT JOIN message_reads mr ON mr.channel_id = cm.channel_id AND mr.user_id = cm.user_id
+			 WHERE cm.channel_id = ?
+			   AND u.deleted_at IS NULL
+			   AND u.is_disabled = 0
+			 ORDER BY u.display_name COLLATE NOCASE ASC`,
+		)
+		.bind(Number(messageId), Number(channelId))
+		.all();
+	return results.map((row) => {
+		const read = Number(row.id) === Number(row.message_sender_id) || Number(row.last_read_message_id || 0) >= Number(messageId);
+		return {
+			id: Number(row.id),
+			username: row.username,
+			displayName: row.display_name,
+			avatarUrl: row.avatar_key ? `/files/${encodeURIComponent(row.avatar_key)}` : '',
+			read,
+			readAt: read ? row.read_at || null : null,
+		};
+	});
+}

@@ -19,6 +19,8 @@ import store from '../store.js';
 
 const router = useRouter();
 const error = ref('');
+const readStatusLoading = ref(false);
+const readStatusDialog = ref({ show: false, message: null, read: [], unread: [] });
 const activeRoom = ref(null);
 const session = computed(() => store.session);
 const showAdminEntry = computed(() => Boolean(session.value?.isAdmin));
@@ -146,6 +148,22 @@ function scrollToQuoted(messageId) {
     target.classList.add('message-row--highlight');
     window.setTimeout(() => target.classList.remove('message-row--highlight'), 1200);
   }
+}
+async function openReadStatus(msg) {
+  if (!activeRoom.value) return;
+  readStatusLoading.value = true;
+  readStatusDialog.value = { show: true, message: msg, read: [], unread: [] };
+  try {
+    const payload = await api.getMessageReadStatus(activeRoom.value.kind, activeRoom.value.id, msg.id);
+    readStatusDialog.value = { show: true, message: msg, read: payload.read || [], unread: payload.unread || [] };
+  } catch (currentError) {
+    error.value = currentError.message;
+  } finally {
+    readStatusLoading.value = false;
+  }
+}
+function closeReadStatus() {
+  readStatusDialog.value = { show: false, message: null, read: [], unread: [] };
 }
 
 async function bootstrap() {
@@ -314,6 +332,14 @@ onBeforeUnmount(() => {
               <div class="message-actions">
                 <button type="button" class="message-action" @click="setReplyTo(msg)">引用</button>
               </div>
+              <button
+                type="button"
+                class="message-read-state"
+                :title="isOwnMessage(msg) ? '查看谁已读 / 未读' : '查看已读状态'"
+                @click="openReadStatus(msg)"
+              >
+                {{ isOwnMessage(msg) ? '已读状态' : '状态' }}
+              </button>
               <span class="message-time">{{ formatBubbleTime(msg.createdAt) }}</span>
             </div>
           </article>
@@ -378,6 +404,39 @@ onBeforeUnmount(() => {
         @delete-group="deleteGroup"
       />
     </aside>
+
+    <Transition name="modal">
+      <div v-if="readStatusDialog.show" class="read-status-modal" @click.self="closeReadStatus">
+        <div class="read-status-panel">
+          <div class="read-status-panel__header">
+            <div>
+              <h3>消息已读状态</h3>
+              <p>{{ readStatusDialog.message?.content || readStatusDialog.message?.attachment?.name || '附件消息' }}</p>
+            </div>
+            <button type="button" class="read-status-close" @click="closeReadStatus">×</button>
+          </div>
+          <p v-if="readStatusLoading" class="read-status-hint">加载中...</p>
+          <div v-else class="read-status-columns">
+            <section>
+              <h4>已读 · {{ readStatusDialog.read.length }}</h4>
+              <div v-if="!readStatusDialog.read.length" class="read-status-hint">暂无</div>
+              <div v-for="user in readStatusDialog.read" :key="`read-${user.id}`" class="read-status-user">
+                <UiAvatar :src="user.avatarUrl" :fallback="user.displayName" size="sm" />
+                <span>{{ user.displayName }}</span>
+              </div>
+            </section>
+            <section>
+              <h4>未读 · {{ readStatusDialog.unread.length }}</h4>
+              <div v-if="!readStatusDialog.unread.length" class="read-status-hint">暂无</div>
+              <div v-for="user in readStatusDialog.unread" :key="`unread-${user.id}`" class="read-status-user">
+                <UiAvatar :src="user.avatarUrl" :fallback="user.displayName" size="sm" />
+                <span>{{ user.displayName }}</span>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </Transition>
 
     <AddConversationDialog
       :show="showAddConversation"
@@ -913,6 +972,23 @@ onBeforeUnmount(() => {
   box-shadow: 0 1px 4px rgba(11, 20, 26, 0.12);
 }
 
+.message-read-state {
+  display: inline-flex;
+  margin-top: 4px;
+  margin-right: 44px;
+  border: 0;
+  background: transparent;
+  color: #667781;
+  cursor: pointer;
+  font-size: 11px;
+  padding: 0;
+}
+
+.message-read-state:hover {
+  color: #008069;
+  text-decoration: underline;
+}
+
 .message-time {
   position: absolute;
   right: 8px;
@@ -1115,6 +1191,41 @@ onBeforeUnmount(() => {
   color: #111b21;
 }
 
+.read-status-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(11, 20, 26, 0.36);
+}
+
+.read-status-panel {
+  width: min(520px, 100%);
+  max-height: min(680px, 90vh);
+  overflow: auto;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 24px 80px rgba(11, 20, 26, 0.22);
+  padding: 18px;
+}
+
+.read-status-panel__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.read-status-panel__header h3 { margin: 0; color: #111b21; font-size: 17px; }
+.read-status-panel__header p { margin: 4px 0 0; color: #667781; font-size: 13px; }
+.read-status-close { border: 0; background: transparent; font-size: 26px; cursor: pointer; color: #667781; }
+.read-status-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.read-status-columns h4 { margin: 0 0 10px; color: #008069; font-size: 13px; }
+.read-status-user { display: flex; align-items: center; gap: 10px; padding: 8px 0; color: #111b21; }
+.read-status-hint { color: #8696a0; font-size: 13px; }
+
 .room-management-sidebar {
   width: 340px;
   flex-shrink: 0;
@@ -1223,6 +1334,10 @@ onBeforeUnmount(() => {
   .composer-send {
     width: 36px;
     height: 36px;
+  }
+
+  .read-status-columns {
+    grid-template-columns: 1fr;
   }
 
   .room-management-sidebar {

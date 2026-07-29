@@ -128,6 +128,10 @@ export default {
     }
     return request(`/messages?${query.toString()}`);
   },
+  getMessageReadStatus(kind, roomId, messageId) {
+    const query = new URLSearchParams({ kind, roomId: String(roomId) });
+    return request(`/messages/${messageId}/read-status?${query.toString()}`);
+  },
   markRoomRead(kind, roomId, messageId) {
     return request('/messages/read', {
       method: 'POST',
