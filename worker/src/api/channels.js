@@ -1,3 +1,4 @@
+import { recordOperation } from '../data/operation-logs.js';
 import {
   listAdminChannels,
   listChannelMembers,
@@ -114,6 +115,14 @@ export function registerChannelRoutes(app) {
       );
     });
     await c.env.DB.batch(statements);
+
+    await recordOperation(c.env.DB, session, {
+      action: 'channel_create',
+      targetType: kind,
+      targetId: channelId,
+      detail: { name, memberCount: 1 + validInvitees.length },
+      request: c.req.raw
+    });
 
     return c.json({
       channel: {
@@ -252,6 +261,13 @@ export function registerChannelRoutes(app) {
     }
 
     const updated = await getChannelById(c.env.DB, channelId);
+    await recordOperation(c.env.DB, session, {
+      action: 'channel_update',
+      targetType: updated.kind,
+      targetId: channelId,
+      detail: { name: updated.name, avatarUpdated: avatarKey !== undefined },
+      request: c.req.raw
+    });
     return c.json({
       channel: {
         id: Number(updated.id),
@@ -286,6 +302,14 @@ export function registerChannelRoutes(app) {
         .bind(channelId, userId, session.userId)
     );
     await c.env.DB.batch(statements);
+
+    await recordOperation(c.env.DB, session, {
+      action: 'channel_invite_members',
+      targetType: management.channel.kind,
+      targetId: channelId,
+      detail: { invitedUserIds: validInvitees },
+      request: c.req.raw
+    });
 
     return c.json({
       ok: true,
@@ -322,6 +346,14 @@ export function registerChannelRoutes(app) {
     )
       .bind(channelId, userId)
       .run();
+
+    await recordOperation(c.env.DB, session, {
+      action: 'channel_remove_member',
+      targetType: management.channel.kind,
+      targetId: channelId,
+      detail: { removedUserId: userId },
+      request: c.req.raw
+    });
 
     return c.json({
       ok: true,
@@ -378,6 +410,14 @@ export function registerChannelRoutes(app) {
     )
       .bind(channelId)
       .run();
+
+    await recordOperation(c.env.DB, c.get('session'), {
+      action: 'admin_channel_delete',
+      targetType: channel.kind,
+      targetId: channelId,
+      detail: { name: channel.name },
+      request: c.req.raw
+    });
 
     return c.json({ ok: true });
   });

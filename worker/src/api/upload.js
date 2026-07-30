@@ -1,3 +1,4 @@
+import { recordOperation } from '../data/operation-logs.js';
 import { getSiteSettings } from '../data/site-settings.js';
 import { errorResponse } from '../utils.js';
 
@@ -194,6 +195,13 @@ export function registerUploadRoutes(app) {
     if (settings.attachmentStorage === 'cfbed') {
       try {
         const cfbedFile = await uploadToCfbed(settings, file);
+        await recordOperation(c.env.DB, session, {
+          action: 'file_upload',
+          targetType: 'attachment',
+          targetId: cfbedFile.url,
+          detail: { name: file.name, size: file.size, type: file.type || '', storage: 'cfbed' },
+          request: c.req.raw
+        });
         return c.json({ file: cfbedFile });
       } catch (error) {
         return errorResponse(error.message);
@@ -210,6 +218,14 @@ export function registerUploadRoutes(app) {
       customMetadata: {
         filename: sanitizeFilename(file.name)
       }
+    });
+
+    await recordOperation(c.env.DB, session, {
+      action: 'file_upload',
+      targetType: 'attachment',
+      targetId: key,
+      detail: { name: file.name, size: file.size, type: file.type || '', storage: 'r2' },
+      request: c.req.raw
     });
 
     return c.json({

@@ -12,6 +12,7 @@ import {
 import { listVisibleChannels } from './data/channels.js';
 import { listUserDms } from './data/dm-queries.js';
 import { ensureGeneralChannelMembership } from './data/general-channel.js';
+import { recordOperation, touchUserOnline } from './data/operation-logs.js';
 import { getSiteSettings, publicSiteSettings } from './data/site-settings.js';
 import { getUserByUsername, listActiveUsers } from './data/users.js';
 import { ApiError } from './errors.js';
@@ -173,6 +174,13 @@ app.post('/api/auth/login', async (c) => {
   }
 
   const session = await createSession(c.env, user);
+  await touchUserOnline(c.env.DB, user.id);
+  await recordOperation(c.env.DB, session, {
+    action: 'login',
+    targetType: 'auth',
+    detail: '登录系统',
+    request: c.req.raw
+  });
   return c.json({
     token: session.token,
     session
@@ -204,12 +212,19 @@ app.get('/api/auth/session', async (c) => {
     avatarUrl: user.results[0].avatar_key ? `/files/${encodeURIComponent(user.results[0].avatar_key)}` : ''
   };
   await putSession(c.env, freshSession);
+  await touchUserOnline(c.env.DB, session.userId);
 
   return c.json({ session: freshSession });
 });
 
 app.post('/api/auth/logout', async (c) => {
   const session = c.get('session');
+  await recordOperation(c.env.DB, session, {
+    action: 'logout',
+    targetType: 'auth',
+    detail: '退出登录',
+    request: c.req.raw
+  });
   await deleteSession(c.env, session.token);
   return c.json({ ok: true });
 });
@@ -264,6 +279,13 @@ app.post('/api/auth/change-password', async (c) => {
     sessionVersion: Number(session.sessionVersion || 0) + 1
   };
   await putSession(c.env, nextSession);
+  await recordOperation(c.env.DB, session, {
+    action: 'password_change',
+    targetType: 'user',
+    targetId: session.userId,
+    detail: '修改自己的登录密码',
+    request: c.req.raw
+  });
 
   return c.json({ ok: true });
 });
@@ -294,6 +316,13 @@ app.patch('/api/me/profile', async (c) => {
     avatarUrl: avatarKey ? `/files/${encodeURIComponent(avatarKey)}` : nextSession.avatarUrl
   };
   await putSession(c.env, merged);
+  await recordOperation(c.env.DB, merged, {
+    action: 'profile_update',
+    targetType: 'user',
+    targetId: session.userId,
+    detail: '更新个人资料',
+    request: c.req.raw
+  });
 
   return c.json({ session: merged });
 });
@@ -306,6 +335,7 @@ app.get('/api/users', async (c) => {
 
 app.get('/api/bootstrap', async (c) => {
   const session = c.get('session');
+  await touchUserOnline(c.env.DB, session.userId);
   await ensureGeneralChannelMembership(c.env.DB, session.userId);
   const [users, channels, dms] = await Promise.all([
     listActiveUsers(c.env.DB, session.userId),

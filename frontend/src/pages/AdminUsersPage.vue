@@ -21,6 +21,17 @@ const inviteForm = reactive({
 });
 
 const activeUserCount = computed(() => users.value.filter((user) => !user.isDisabled).length);
+const onlineUserCount = computed(() => users.value.filter((user) => isUserOnline(user)).length);
+
+function formatTime(value) {
+  return value ? new Date(value).toLocaleString() : '从未上线';
+}
+
+function isUserOnline(user) {
+  if (!user.lastSeenAt || user.isDisabled) return false;
+  const timestamp = new Date(user.lastSeenAt).getTime();
+  return Number.isFinite(timestamp) && Date.now() - timestamp <= 5 * 60 * 1000;
+}
 
 async function loadUsers() {
   loading.value = true;
@@ -135,6 +146,10 @@ onMounted(loadUsers);
           <strong>{{ activeUserCount }}</strong>
           <span>正常用户</span>
         </UiSurface>
+        <UiSurface class="admin-metric-card">
+          <strong>{{ onlineUserCount }}</strong>
+          <span>当前在线</span>
+        </UiSurface>
       </div>
     </header>
 
@@ -224,6 +239,7 @@ onMounted(loadUsers);
               <tr>
                 <th>用户</th>
                 <th>状态</th>
+                <th>最后上线</th>
                 <th>创建时间</th>
                 <th>操作</th>
               </tr>
@@ -234,7 +250,12 @@ onMounted(loadUsers);
                   <strong>{{ user.displayName }}</strong>
                   <div class="muted">@{{ user.username }}</div>
                 </td>
-                <td>{{ user.isDisabled ? '已禁用' : '正常' }}</td>
+                <td>
+                  <span class="status-pill" :class="{ 'status-pill--online': isUserOnline(user) }">
+                    {{ user.isDisabled ? '已禁用' : isUserOnline(user) ? '在线' : '离线' }}
+                  </span>
+                </td>
+                <td>{{ formatTime(user.lastSeenAt) }}</td>
                 <td>{{ new Date(user.createdAt).toLocaleString() }}</td>
                 <td>
                   <div class="inline-actions">
@@ -500,6 +521,22 @@ onMounted(loadUsers);
 
 :deep(.list-table tbody tr:hover) {
   background: rgba(91, 141, 191, 0.03);
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(107, 138, 171, 0.1);
+  color: #6b8aab;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.status-pill--online {
+  background: rgba(36, 166, 91, 0.12);
+  color: #24a65b;
 }
 
 :deep(.error-text) {

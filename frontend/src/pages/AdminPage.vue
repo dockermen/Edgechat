@@ -8,7 +8,8 @@ const router = useRouter();
 const navItems = [
   { label: '用户管理', desc: '创建、禁用、删除和重置用户', to: '/admin/users', icon: 'users' },
   { label: '消息查看', desc: '搜索消息并查看会话', to: '/admin/messages', icon: 'messages' },
-  { label: '网站设置', desc: '站点概况与后台配置', to: '/admin/site', icon: 'site' }
+  { label: '网站设置', desc: '站点概况与后台配置', to: '/admin/site', icon: 'site' },
+  { label: '操作日志', desc: '上线时间、操作记录和审计日志', to: '/admin/logs', icon: 'logs' }
 ];
 
 const currentTitle = computed(

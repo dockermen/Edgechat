@@ -1,3 +1,4 @@
+import { recordOperation, touchUserOnline } from '../data/operation-logs.js';
 import { MessageSubmissionError, submitRoomMessage } from '../message-submission.js';
 import { authorizeRoom } from '../room-access.js';
 import { validateSession } from '../session.js';
@@ -227,6 +228,13 @@ export class ChannelRoom {
       // 未读投影不影响消息提交结果，交给 DO 生命周期继续完成，缩短发送链路。
       this.state.waitUntil(
         Promise.allSettled([
+          touchUserOnline(this.env.DB, currentMeta.principal.userId),
+          recordOperation(this.env.DB, currentMeta.principal, {
+            action: 'message_send',
+            targetType: currentMeta.room.kind,
+            targetId: currentMeta.room.id,
+            detail: { roomName: currentMeta.room.name, messageId: saved.id }
+          }),
           projectUnreadMessage(this.env, {
             room: currentMeta.room,
             senderId: currentMeta.principal.userId,

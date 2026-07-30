@@ -134,6 +134,7 @@ test("后台用户与频道成员 projection 保持稳定字段", async () => {
 			avatar_key: "a.png",
 			is_disabled: "1",
 			created_at: "2026-07-23",
+			last_seen_at: "2026-07-30 10:00:00",
 		},
 	]);
 	assert.deepEqual((await listAdminUsers(adminUsers.db))[0], {
@@ -143,6 +144,7 @@ test("后台用户与频道成员 projection 保持稳定字段", async () => {
 		avatarUrl: "/files/a.png",
 		isDisabled: true,
 		createdAt: "2026-07-23",
+		lastSeenAt: "2026-07-30 10:00:00",
 	});
 
 	const members = createQueryDb([

@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS users (
   is_disabled INTEGER NOT NULL DEFAULT 0,
   is_admin INTEGER NOT NULL DEFAULT 0,
   session_version INTEGER NOT NULL DEFAULT 0,
+  last_seen_at TEXT,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   deleted_at TEXT
@@ -139,6 +140,22 @@ CREATE TABLE IF NOT EXISTS registration_invites (
   FOREIGN KEY (consumed_by_user_id) REFERENCES users(id)
 );
 
+
+CREATE TABLE IF NOT EXISTS operation_logs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER,
+  username TEXT NOT NULL DEFAULT '',
+  display_name TEXT NOT NULL DEFAULT '',
+  action TEXT NOT NULL,
+  target_type TEXT NOT NULL DEFAULT '',
+  target_id TEXT NOT NULL DEFAULT '',
+  detail TEXT NOT NULL DEFAULT '',
+  ip TEXT NOT NULL DEFAULT '',
+  user_agent TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
 CREATE TABLE IF NOT EXISTS pending_r2_delete (
   object_key TEXT PRIMARY KEY,
   retry_count INTEGER NOT NULL DEFAULT 0,
@@ -171,6 +188,15 @@ CREATE INDEX IF NOT EXISTS idx_channels_kind
 
 CREATE INDEX IF NOT EXISTS idx_users_username
   ON users(username);
+
+CREATE INDEX IF NOT EXISTS idx_users_last_seen
+  ON users(last_seen_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_operation_logs_created
+  ON operation_logs(created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_operation_logs_user_created
+  ON operation_logs(user_id, created_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_registration_invites_active
   ON registration_invites(created_at DESC, deleted_at, consumed_at);

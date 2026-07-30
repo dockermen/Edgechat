@@ -3,6 +3,7 @@ import { listAdminChannels } from '../data/channels.js';
 import { listAdminDms } from '../data/dm-queries.js';
 import { ensureGeneralChannelMembership } from '../data/general-channel.js';
 import { listMessages } from '../data/messages.js';
+import { listOperationLogs, recordOperation } from '../data/operation-logs.js';
 import { getSiteSettings, updateSiteSettings } from '../data/site-settings.js';
 import { listAdminUsers } from '../data/users.js';
 import { authorizeRoom } from '../room-access.js';
@@ -70,6 +71,12 @@ export function registerAdminRoutes(app) {
       dingtalkWebhookUrl,
       dingtalkPushContent
     });
+    await recordOperation(c.env.DB, c.get('session'), {
+      action: 'admin_site_update',
+      targetType: 'site_settings',
+      detail: '更新站点设置',
+      request: c.req.raw
+    });
     return c.json({ site });
   });
 
@@ -120,6 +127,14 @@ export function registerAdminRoutes(app) {
       .bind(token, note, session.userId)
       .run();
 
+    await recordOperation(c.env.DB, session, {
+      action: 'admin_invite_create',
+      targetType: 'registration_invite',
+      targetId: result.meta.last_row_id,
+      detail: note ? `创建注册链接：${note}` : '创建注册链接',
+      request: c.req.raw
+    });
+
     return c.json({
       invite: {
         id: Number(result.meta.last_row_id),
@@ -150,12 +165,31 @@ export function registerAdminRoutes(app) {
       .bind(inviteId)
       .run();
 
+    await recordOperation(c.env.DB, c.get('session'), {
+      action: 'admin_invite_revoke',
+      targetType: 'registration_invite',
+      targetId: inviteId,
+      detail: '停用注册链接',
+      request: c.req.raw
+    });
+
     return c.json({ ok: true });
   });
 
   app.get('/api/admin/users', async (c) => {
     const users = await listAdminUsers(c.env.DB);
     return c.json({ users });
+  });
+
+  app.get('/api/admin/logs', async (c) => {
+    const logs = await listOperationLogs(c.env.DB, {
+      userId: c.req.query('userId'),
+      action: c.req.query('action'),
+      keyword: c.req.query('keyword'),
+      before: c.req.query('before'),
+      limit: c.req.query('limit')
+    });
+    return c.json({ logs });
   });
 
   app.post('/api/admin/users', async (c) => {
@@ -188,6 +222,14 @@ export function registerAdminRoutes(app) {
 
     await ensureGeneralChannelMembership(c.env.DB, result.meta.last_row_id);
 
+    await recordOperation(c.env.DB, c.get('session'), {
+      action: 'admin_user_create',
+      targetType: 'user',
+      targetId: result.meta.last_row_id,
+      detail: `创建用户：${displayName} (@${username})`,
+      request: c.req.raw
+    });
+
     return c.json({
       user: {
         id: result.meta.last_row_id,
@@ -215,6 +257,14 @@ export function registerAdminRoutes(app) {
       .bind(isDisabled, payload.displayName || null, bumpVersion, userId)
       .run();
 
+    await recordOperation(c.env.DB, c.get('session'), {
+      action: 'admin_user_update',
+      targetType: 'user',
+      targetId: userId,
+      detail: isDisabled ? '禁用用户或更新资料' : '启用用户或更新资料',
+      request: c.req.raw
+    });
+
     return c.json({ ok: true });
   });
 
@@ -239,6 +289,14 @@ export function registerAdminRoutes(app) {
       .bind(hashed.hash, hashed.salt, userId)
       .run();
 
+    await recordOperation(c.env.DB, c.get('session'), {
+      action: 'admin_user_reset_password',
+      targetType: 'user',
+      targetId: userId,
+      detail: '重置用户密码',
+      request: c.req.raw
+    });
+
     return c.json({ ok: true });
   });
 
@@ -254,6 +312,14 @@ export function registerAdminRoutes(app) {
     )
       .bind(userId)
       .run();
+
+    await recordOperation(c.env.DB, c.get('session'), {
+      action: 'admin_user_delete',
+      targetType: 'user',
+      targetId: userId,
+      detail: '删除用户',
+      request: c.req.raw
+    });
 
     return c.json({ ok: true });
   });

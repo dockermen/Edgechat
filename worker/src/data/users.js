@@ -14,6 +14,7 @@ function mapAdminUser(row) {
 		...mapUserSummary(row),
 		isDisabled: Boolean(Number(row.is_disabled)),
 		createdAt: row.created_at,
+		lastSeenAt: row.last_seen_at || null,
 	};
 }
 
@@ -64,7 +65,7 @@ export async function listActiveUsers(db, excludeUserId) {
 export async function listAdminUsers(db) {
 	const { results } = await db
 		.prepare(
-			`SELECT id, username, display_name, avatar_key, is_disabled, created_at
+			`SELECT id, username, display_name, avatar_key, is_disabled, created_at, last_seen_at
 			 FROM users
 			 WHERE deleted_at IS NULL
 			 ORDER BY created_at DESC`,

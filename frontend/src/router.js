@@ -7,6 +7,7 @@ import AdminPage from './pages/AdminPage.vue';
 import AdminUsersPage from './pages/AdminUsersPage.vue';
 import AdminMessagesPage from './pages/AdminMessagesPage.vue';
 import AdminSitePage from './pages/AdminSitePage.vue';
+import AdminLogsPage from './pages/AdminLogsPage.vue';
 import AdminRoomPage from './pages/AdminRoomPage.vue';
 import SettingsPage from './pages/SettingsPage.vue';
 import { addAuthInvalidListener } from './auth-storage.js';
@@ -57,6 +58,12 @@ const router = createRouter({
           path: 'site',
           name: 'admin-site',
           component: AdminSitePage,
+          meta: { admin: true, transition: 'page' }
+        },
+        {
+          path: 'logs',
+          name: 'admin-logs',
+          component: AdminLogsPage,
           meta: { admin: true, transition: 'page' }
         }
       ]

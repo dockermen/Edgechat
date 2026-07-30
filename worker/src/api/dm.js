@@ -1,5 +1,6 @@
 import { ensureDmChannel } from '../data/dm-provisioning.js';
 import { listAdminDms, listUserDms } from '../data/dm-queries.js';
+import { recordOperation } from '../data/operation-logs.js';
 import { errorResponse, parseJsonRequest } from '../utils.js';
 
 export function registerDmRoutes(app) {
@@ -34,6 +35,13 @@ export function registerDmRoutes(app) {
     }
 
     const channel = await ensureDmChannel(c.env.DB, session.userId, targetUserId);
+    await recordOperation(c.env.DB, session, {
+      action: 'dm_open',
+      targetType: 'dm',
+      targetId: channel.id,
+      detail: { targetUserId },
+      request: c.req.raw
+    });
     return c.json({
       dm: {
         id: Number(channel.id),
