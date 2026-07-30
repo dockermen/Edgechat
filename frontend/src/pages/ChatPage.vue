@@ -57,7 +57,7 @@ const {
   messages, loading, wsStatus, composerText, pendingAttachment, uploadProgress, uploadingAttachment, replyToMessage, sending,
   messagesEl, fileInputEl, isOwnMessage,
   loadMessages, connectSocket, disconnectSocket, sendMessage, handleComposerKeydown,
-  openFilePicker, uploadAttachment, clearAttachment, setReplyTo, clearReplyTo, loadOlder
+  openFilePicker, uploadAttachment, handleComposerPaste, clearAttachment, setReplyTo, clearReplyTo, loadOlder
 } = useChatRoom({
   activeRoom,
   session,
@@ -369,7 +369,7 @@ onBeforeUnmount(() => {
           <div v-if="error" class="composer-error">{{ error }}</div>
           <div class="composer-row">
             <input ref="fileInputEl" type="file" class="composer-file-input" @change="uploadAttachment" />
-            <button type="button" class="composer-btn" :disabled="!activeRoom" @click="openFilePicker">
+            <button type="button" class="composer-btn" :disabled="uploadingAttachment || !activeRoom" @click="openFilePicker">
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8">
                 <title>添加附件</title>
                 <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
@@ -377,9 +377,9 @@ onBeforeUnmount(() => {
             </button>
             <UiTextarea
               v-model="composerText" class="composer-input" auto-grow :max-height="120" rows="1"
-              :disabled="!activeRoom" placeholder="输入消息..." @keydown="handleComposerKeydown"
+              :disabled="!activeRoom" placeholder="输入消息，支持直接粘贴图片..." @keydown="handleComposerKeydown" @paste="handleComposerPaste"
             />
-            <button type="button" class="composer-send" :disabled="sending || !activeRoom" @click="sendMessage">
+            <button type="button" class="composer-send" :disabled="sending || uploadingAttachment || !activeRoom" @click="sendMessage">
               <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <title>发送</title>
                 <line x1="4" y1="12" x2="20" y2="12"/>

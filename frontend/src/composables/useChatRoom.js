@@ -199,14 +199,18 @@ export function useChatRoom({
 		fileInputEl.value?.click();
 	}
 
-	async function uploadAttachment(event) {
-		const file = event.target.files?.[0];
+	async function uploadFileAsAttachment(file) {
 		if (!file) {
+			return;
+		}
+		if (pendingAttachment.value || uploadingAttachment.value) {
+			error.value = "已有附件，请先发送或移除后再上传";
 			return;
 		}
 
 		uploadingAttachment.value = true;
 		uploadProgress.value = 1;
+		error.value = "";
 		try {
 			const payload = await api.uploadFile(file, {
 				onProgress(percent) {
@@ -222,8 +226,40 @@ export function useChatRoom({
 			if (!pendingAttachment.value) {
 				uploadProgress.value = 0;
 			}
-			event.target.value = "";
 		}
+	}
+
+	async function uploadAttachment(event) {
+		const file = event.target.files?.[0];
+		await uploadFileAsAttachment(file);
+		event.target.value = "";
+	}
+
+	function pastedImageFile(event) {
+		const items = Array.from(event.clipboardData?.items || []);
+		for (const item of items) {
+			if (item.kind === "file" && String(item.type || "").startsWith("image/")) {
+				const file = item.getAsFile();
+				if (!file) continue;
+				const extension = String(file.type || "image/png").split("/").pop() || "png";
+				const name = file.name && file.name !== "image.png"
+					? file.name
+					: `pasted-image-${Date.now()}.${extension}`;
+				return new File([file], name, { type: file.type || "image/png" });
+			}
+		}
+
+		const files = Array.from(event.clipboardData?.files || []);
+		return files.find((file) => String(file.type || "").startsWith("image/")) || null;
+	}
+
+	async function handleComposerPaste(event) {
+		const file = pastedImageFile(event);
+		if (!file) {
+			return;
+		}
+		event.preventDefault();
+		await uploadFileAsAttachment(file);
 	}
 
 	function clearAttachment() {
@@ -277,6 +313,7 @@ export function useChatRoom({
 		handleComposerKeydown,
 		openFilePicker,
 		uploadAttachment,
+		handleComposerPaste,
 		clearAttachment,
 		setReplyTo,
 		clearReplyTo,
